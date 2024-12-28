@@ -1,10 +1,10 @@
 {
-  "name": "@uniswap/v3-sdk",
+  "name": "uniswap-v3-sdk",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
-  "version": "3.0.0-alpha.6",
+  "version": "3.0.0",
   "description": "⚒️ An SDK for building applications on top of Uniswap V3",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -17,31 +17,28 @@
     "ethereum"
   ],
   "module": "dist/v3-sdk.esm.js",
+  "engines": {
+    "node": "16.20.2"
+  },
   "scripts": {
     "build": "tsdx build",
     "start": "tsdx watch",
-    "test": "tsdx test",
     "prepublishOnly": "tsdx build"
   },
   "dependencies": {
-    "@ethersproject/abi": "^5.0.12",
-    "@ethersproject/solidity": "^5.0.9",
-    "@uniswap/sdk-core": "file:../sdk-core",
+    "@alagunoff/uniswap-sdk-core": "3.0.0",
+    "@ethersproject/abi": "5.0.12",
+    "@ethersproject/solidity": "5.0.9",
     "@uniswap/v3-periphery": "1.0.0",
-    "tiny-invariant": "^1.1.0",
-    "tiny-warning": "^1.0.3"
+    "tiny-invariant": "1.1.0",
+    "tiny-warning": "1.0.3"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.25",
     "@uniswap/v3-core": "1.0.0",
-    "tsdx": "^0.14.1"
-  },
-  "engines": {
-    "node": ">=10"
+    "tsdx": "0.14.1"
   },
   "prettier": {
-    "printWidth": 120,
-    "semi": false,
-    "singleQuote": true
+    "singleQuote": true,
+    "endOfLine": "auto"
   }
 }
