@@ -1,34 +1,44 @@
-import { BigintIsh, MaxUint256, Percent, Price, CurrencyAmount, Token } from '@uniswap/sdk-core'
-import JSBI from 'jsbi'
-import invariant from 'tiny-invariant'
-import { ZERO } from '../internalConstants'
-import { maxLiquidityForAmounts } from '../utils/maxLiquidityForAmounts'
-import { tickToPrice } from '../utils/priceTickConversions'
-import { SqrtPriceMath } from '../utils/sqrtPriceMath'
-import { TickMath } from '../utils/tickMath'
-import { encodeSqrtRatioX96 } from '../utils/encodeSqrtRatioX96'
-import { Pool } from './pool'
+import {
+  BigintIsh,
+  MaxUint256,
+  Percent,
+  Price,
+  CurrencyAmount,
+  Token,
+} from '@alagunoff/uniswap-sdk-core';
+import JSBI from 'jsbi';
+import invariant from 'tiny-invariant';
+import { ZERO } from '../internalConstants';
+import { maxLiquidityForAmounts } from '../utils/maxLiquidityForAmounts';
+import { tickToPrice } from '../utils/priceTickConversions';
+import { SqrtPriceMath } from '../utils/sqrtPriceMath';
+import { TickMath } from '../utils/tickMath';
+import { encodeSqrtRatioX96 } from '../utils/encodeSqrtRatioX96';
+import { Pool } from './pool';
 
 interface PositionConstructorArgs {
-  pool: Pool
-  tickLower: number
-  tickUpper: number
-  liquidity: BigintIsh
+  pool: Pool;
+  tickLower: number;
+  tickUpper: number;
+  liquidity: BigintIsh;
 }
 
 /**
  * Represents a position on a Uniswap V3 Pool
  */
 export class Position {
-  public readonly pool: Pool
-  public readonly tickLower: number
-  public readonly tickUpper: number
-  public readonly liquidity: JSBI
+  public readonly pool: Pool;
+  public readonly tickLower: number;
+  public readonly tickUpper: number;
+  public readonly liquidity: JSBI;
 
   // cached resuts for the getters
-  private _token0Amount: CurrencyAmount<Token> | null = null
-  private _token1Amount: CurrencyAmount<Token> | null = null
-  private _mintAmounts: Readonly<{ amount0: JSBI; amount1: JSBI }> | null = null
+  private _token0Amount: CurrencyAmount<Token> | null = null;
+  private _token1Amount: CurrencyAmount<Token> | null = null;
+  private _mintAmounts: Readonly<{
+    amount0: JSBI;
+    amount1: JSBI;
+  }> | null = null;
 
   /**
    * Constructs a position for a given pool with the given liquidity
@@ -37,29 +47,40 @@ export class Position {
    * @param tickLower the lower tick of the position
    * @param tickUpper the upper tick of the position
    */
-  public constructor({ pool, liquidity, tickLower, tickUpper }: PositionConstructorArgs) {
-    invariant(tickLower < tickUpper, 'TICK_ORDER')
-    invariant(tickLower >= TickMath.MIN_TICK && tickLower % pool.tickSpacing === 0, 'TICK_LOWER')
-    invariant(tickUpper <= TickMath.MAX_TICK && tickUpper % pool.tickSpacing === 0, 'TICK_UPPER')
+  public constructor({
+    pool,
+    liquidity,
+    tickLower,
+    tickUpper,
+  }: PositionConstructorArgs) {
+    invariant(tickLower < tickUpper, 'TICK_ORDER');
+    invariant(
+      tickLower >= TickMath.MIN_TICK && tickLower % pool.tickSpacing === 0,
+      'TICK_LOWER',
+    );
+    invariant(
+      tickUpper <= TickMath.MAX_TICK && tickUpper % pool.tickSpacing === 0,
+      'TICK_UPPER',
+    );
 
-    this.pool = pool
-    this.tickLower = tickLower
-    this.tickUpper = tickUpper
-    this.liquidity = JSBI.BigInt(liquidity)
+    this.pool = pool;
+    this.tickLower = tickLower;
+    this.tickUpper = tickUpper;
+    this.liquidity = JSBI.BigInt(liquidity);
   }
 
   /**
    * Returns the price of token0 at the lower tick
    */
   public get token0PriceLower(): Price<Token, Token> {
-    return tickToPrice(this.pool.token0, this.pool.token1, this.tickLower)
+    return tickToPrice(this.pool.token0, this.pool.token1, this.tickLower);
   }
 
   /**
    * Returns the price of token0 at the upper tick
    */
   public get token0PriceUpper(): Price<Token, Token> {
-    return tickToPrice(this.pool.token0, this.pool.token1, this.tickUpper)
+    return tickToPrice(this.pool.token0, this.pool.token1, this.tickUpper);
   }
 
   /**
@@ -74,9 +95,9 @@ export class Position {
             TickMath.getSqrtRatioAtTick(this.tickLower),
             TickMath.getSqrtRatioAtTick(this.tickUpper),
             this.liquidity,
-            false
-          )
-        )
+            false,
+          ),
+        );
       } else if (this.pool.tickCurrent < this.tickUpper) {
         this._token0Amount = CurrencyAmount.fromRawAmount(
           this.pool.token0,
@@ -84,14 +105,17 @@ export class Position {
             this.pool.sqrtRatioX96,
             TickMath.getSqrtRatioAtTick(this.tickUpper),
             this.liquidity,
-            false
-          )
-        )
+            false,
+          ),
+        );
       } else {
-        this._token0Amount = CurrencyAmount.fromRawAmount(this.pool.token0, ZERO)
+        this._token0Amount = CurrencyAmount.fromRawAmount(
+          this.pool.token0,
+          ZERO,
+        );
       }
     }
-    return this._token0Amount
+    return this._token0Amount;
   }
 
   /**
@@ -100,7 +124,10 @@ export class Position {
   public get amount1(): CurrencyAmount<Token> {
     if (this._token1Amount === null) {
       if (this.pool.tickCurrent < this.tickLower) {
-        this._token1Amount = CurrencyAmount.fromRawAmount(this.pool.token1, ZERO)
+        this._token1Amount = CurrencyAmount.fromRawAmount(
+          this.pool.token1,
+          ZERO,
+        );
       } else if (this.pool.tickCurrent < this.tickUpper) {
         this._token1Amount = CurrencyAmount.fromRawAmount(
           this.pool.token1,
@@ -108,9 +135,9 @@ export class Position {
             TickMath.getSqrtRatioAtTick(this.tickLower),
             this.pool.sqrtRatioX96,
             this.liquidity,
-            false
-          )
-        )
+            false,
+          ),
+        );
       } else {
         this._token1Amount = CurrencyAmount.fromRawAmount(
           this.pool.token1,
@@ -118,12 +145,12 @@ export class Position {
             TickMath.getSqrtRatioAtTick(this.tickLower),
             TickMath.getSqrtRatioAtTick(this.tickUpper),
             this.liquidity,
-            false
-          )
-        )
+            false,
+          ),
+        );
       }
     }
-    return this._token1Amount
+    return this._token1Amount;
   }
 
   /**
@@ -131,21 +158,37 @@ export class Position {
    * @param slippageTolerance amount by which the price can 'slip'
    * @private
    */
-  private ratiosAfterSlippage(slippageTolerance: Percent): { sqrtRatioX96Lower: JSBI; sqrtRatioX96Upper: JSBI } {
-    const priceLower = this.pool.token0Price.asFraction.multiply(new Percent(1).subtract(slippageTolerance))
-    const priceUpper = this.pool.token0Price.asFraction.multiply(slippageTolerance.add(1))
-    let sqrtRatioX96Lower = encodeSqrtRatioX96(priceLower.numerator, priceLower.denominator)
+  private ratiosAfterSlippage(slippageTolerance: Percent): {
+    sqrtRatioX96Lower: JSBI;
+    sqrtRatioX96Upper: JSBI;
+  } {
+    const priceLower = this.pool.token0Price.asFraction.multiply(
+      new Percent(1).subtract(slippageTolerance),
+    );
+    const priceUpper = this.pool.token0Price.asFraction.multiply(
+      slippageTolerance.add(1),
+    );
+    let sqrtRatioX96Lower = encodeSqrtRatioX96(
+      priceLower.numerator,
+      priceLower.denominator,
+    );
     if (JSBI.lessThanOrEqual(sqrtRatioX96Lower, TickMath.MIN_SQRT_RATIO)) {
-      sqrtRatioX96Lower = JSBI.add(TickMath.MIN_SQRT_RATIO, JSBI.BigInt(1))
+      sqrtRatioX96Lower = JSBI.add(TickMath.MIN_SQRT_RATIO, JSBI.BigInt(1));
     }
-    let sqrtRatioX96Upper = encodeSqrtRatioX96(priceUpper.numerator, priceUpper.denominator)
+    let sqrtRatioX96Upper = encodeSqrtRatioX96(
+      priceUpper.numerator,
+      priceUpper.denominator,
+    );
     if (JSBI.greaterThanOrEqual(sqrtRatioX96Upper, TickMath.MAX_SQRT_RATIO)) {
-      sqrtRatioX96Upper = JSBI.subtract(TickMath.MAX_SQRT_RATIO, JSBI.BigInt(1))
+      sqrtRatioX96Upper = JSBI.subtract(
+        TickMath.MAX_SQRT_RATIO,
+        JSBI.BigInt(1),
+      );
     }
     return {
       sqrtRatioX96Lower,
-      sqrtRatioX96Upper
-    }
+      sqrtRatioX96Upper,
+    };
   }
 
   /**
@@ -153,9 +196,12 @@ export class Position {
    * with the given slippage tolerance
    * @param slippageTolerance tolerance of unfavorable slippage from the current price
    */
-  public mintAmountsWithSlippage(slippageTolerance: Percent): Readonly<{ amount0: JSBI; amount1: JSBI }> {
+  public mintAmountsWithSlippage(
+    slippageTolerance: Percent,
+  ): Readonly<{ amount0: JSBI; amount1: JSBI }> {
     // get lower/upper prices
-    const { sqrtRatioX96Upper, sqrtRatioX96Lower } = this.ratiosAfterSlippage(slippageTolerance)
+    const { sqrtRatioX96Upper, sqrtRatioX96Lower } =
+      this.ratiosAfterSlippage(slippageTolerance);
 
     // construct counterfactual pools
     const poolLower = new Pool(
@@ -164,16 +210,16 @@ export class Position {
       this.pool.fee,
       sqrtRatioX96Lower,
       0 /* liquidity doesn't matter */,
-      TickMath.getTickAtSqrtRatio(sqrtRatioX96Lower)
-    )
+      TickMath.getTickAtSqrtRatio(sqrtRatioX96Lower),
+    );
     const poolUpper = new Pool(
       this.pool.token0,
       this.pool.token1,
       this.pool.fee,
       sqrtRatioX96Upper,
       0 /* liquidity doesn't matter */,
-      TickMath.getTickAtSqrtRatio(sqrtRatioX96Upper)
-    )
+      TickMath.getTickAtSqrtRatio(sqrtRatioX96Upper),
+    );
 
     // because the router is imprecise, we need to calculate the position that will be created (assuming no slippage)
     const positionThatWillBeCreated = Position.fromAmounts({
@@ -181,8 +227,8 @@ export class Position {
       tickLower: this.tickLower,
       tickUpper: this.tickUpper,
       ...this.mintAmounts, // the mint amounts are what will be passed as calldata
-      useFullPrecision: false
-    })
+      useFullPrecision: false,
+    });
 
     // we want the smaller amounts...
     // ...which occurs at the upper price for amount0...
@@ -190,17 +236,17 @@ export class Position {
       pool: poolUpper,
       liquidity: positionThatWillBeCreated.liquidity,
       tickLower: this.tickLower,
-      tickUpper: this.tickUpper
-    }).mintAmounts
+      tickUpper: this.tickUpper,
+    }).mintAmounts;
     // ...and the lower for amount1
     const { amount1 } = new Position({
       pool: poolLower,
       liquidity: positionThatWillBeCreated.liquidity,
       tickLower: this.tickLower,
-      tickUpper: this.tickUpper
-    }).mintAmounts
+      tickUpper: this.tickUpper,
+    }).mintAmounts;
 
-    return { amount0, amount1 }
+    return { amount0, amount1 };
   }
 
   /**
@@ -208,9 +254,12 @@ export class Position {
    * position with the given slippage tolerance
    * @param slippageTolerance tolerance of unfavorable slippage from the current price
    */
-  public burnAmountsWithSlippage(slippageTolerance: Percent): Readonly<{ amount0: JSBI; amount1: JSBI }> {
+  public burnAmountsWithSlippage(
+    slippageTolerance: Percent,
+  ): Readonly<{ amount0: JSBI; amount1: JSBI }> {
     // get lower/upper prices
-    const { sqrtRatioX96Upper, sqrtRatioX96Lower } = this.ratiosAfterSlippage(slippageTolerance)
+    const { sqrtRatioX96Upper, sqrtRatioX96Lower } =
+      this.ratiosAfterSlippage(slippageTolerance);
 
     // construct counterfactual pools
     const poolLower = new Pool(
@@ -219,16 +268,16 @@ export class Position {
       this.pool.fee,
       sqrtRatioX96Lower,
       0 /* liquidity doesn't matter */,
-      TickMath.getTickAtSqrtRatio(sqrtRatioX96Lower)
-    )
+      TickMath.getTickAtSqrtRatio(sqrtRatioX96Lower),
+    );
     const poolUpper = new Pool(
       this.pool.token0,
       this.pool.token1,
       this.pool.fee,
       sqrtRatioX96Upper,
       0 /* liquidity doesn't matter */,
-      TickMath.getTickAtSqrtRatio(sqrtRatioX96Upper)
-    )
+      TickMath.getTickAtSqrtRatio(sqrtRatioX96Upper),
+    );
 
     // we want the smaller amounts...
     // ...which occurs at the upper price for amount0...
@@ -236,17 +285,17 @@ export class Position {
       pool: poolUpper,
       liquidity: this.liquidity,
       tickLower: this.tickLower,
-      tickUpper: this.tickUpper
-    }).amount0
+      tickUpper: this.tickUpper,
+    }).amount0;
     // ...and the lower for amount1
     const amount1 = new Position({
       pool: poolLower,
       liquidity: this.liquidity,
       tickLower: this.tickLower,
-      tickUpper: this.tickUpper
-    }).amount1
+      tickUpper: this.tickUpper,
+    }).amount1;
 
-    return { amount0: amount0.quotient, amount1: amount1.quotient }
+    return { amount0: amount0.quotient, amount1: amount1.quotient };
   }
 
   /**
@@ -261,25 +310,25 @@ export class Position {
             TickMath.getSqrtRatioAtTick(this.tickLower),
             TickMath.getSqrtRatioAtTick(this.tickUpper),
             this.liquidity,
-            true
+            true,
           ),
-          amount1: ZERO
-        }
+          amount1: ZERO,
+        };
       } else if (this.pool.tickCurrent < this.tickUpper) {
         return {
           amount0: SqrtPriceMath.getAmount0Delta(
             this.pool.sqrtRatioX96,
             TickMath.getSqrtRatioAtTick(this.tickUpper),
             this.liquidity,
-            true
+            true,
           ),
           amount1: SqrtPriceMath.getAmount1Delta(
             TickMath.getSqrtRatioAtTick(this.tickLower),
             this.pool.sqrtRatioX96,
             this.liquidity,
-            true
-          )
-        }
+            true,
+          ),
+        };
       } else {
         return {
           amount0: ZERO,
@@ -287,12 +336,12 @@ export class Position {
             TickMath.getSqrtRatioAtTick(this.tickLower),
             TickMath.getSqrtRatioAtTick(this.tickUpper),
             this.liquidity,
-            true
-          )
-        }
+            true,
+          ),
+        };
       }
     }
-    return this._mintAmounts
+    return this._mintAmounts;
   }
 
   /**
@@ -312,17 +361,17 @@ export class Position {
     tickUpper,
     amount0,
     amount1,
-    useFullPrecision
+    useFullPrecision,
   }: {
-    pool: Pool
-    tickLower: number
-    tickUpper: number
-    amount0: BigintIsh
-    amount1: BigintIsh
-    useFullPrecision: boolean
+    pool: Pool;
+    tickLower: number;
+    tickUpper: number;
+    amount0: BigintIsh;
+    amount1: BigintIsh;
+    useFullPrecision: boolean;
   }) {
-    const sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower)
-    const sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper)
+    const sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
+    const sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
     return new Position({
       pool,
       tickLower,
@@ -333,9 +382,9 @@ export class Position {
         sqrtRatioBX96,
         amount0,
         amount1,
-        useFullPrecision
-      )
-    })
+        useFullPrecision,
+      ),
+    });
   }
 
   /**
@@ -352,15 +401,22 @@ export class Position {
     tickLower,
     tickUpper,
     amount0,
-    useFullPrecision
+    useFullPrecision,
   }: {
-    pool: Pool
-    tickLower: number
-    tickUpper: number
-    amount0: BigintIsh
-    useFullPrecision: boolean
+    pool: Pool;
+    tickLower: number;
+    tickUpper: number;
+    amount0: BigintIsh;
+    useFullPrecision: boolean;
   }) {
-    return Position.fromAmounts({ pool, tickLower, tickUpper, amount0, amount1: MaxUint256, useFullPrecision })
+    return Position.fromAmounts({
+      pool,
+      tickLower,
+      tickUpper,
+      amount0,
+      amount1: MaxUint256,
+      useFullPrecision,
+    });
   }
 
   /**
@@ -374,14 +430,21 @@ export class Position {
     pool,
     tickLower,
     tickUpper,
-    amount1
+    amount1,
   }: {
-    pool: Pool
-    tickLower: number
-    tickUpper: number
-    amount1: BigintIsh
+    pool: Pool;
+    tickLower: number;
+    tickUpper: number;
+    amount1: BigintIsh;
   }) {
     // this function always uses full precision,
-    return Position.fromAmounts({ pool, tickLower, tickUpper, amount0: MaxUint256, amount1, useFullPrecision: true })
+    return Position.fromAmounts({
+      pool,
+      tickLower,
+      tickUpper,
+      amount0: MaxUint256,
+      amount1,
+      useFullPrecision: true,
+    });
   }
 }

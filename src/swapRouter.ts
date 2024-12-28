@@ -1,23 +1,29 @@
-import { Interface } from '@ethersproject/abi'
-import { BigintIsh, Currency, Percent, TradeType, validateAndParseAddress } from '@uniswap/sdk-core'
-import invariant from 'tiny-invariant'
-import { Trade } from './entities/trade'
-import { ADDRESS_ZERO } from './constants'
-import { PermitOptions, SelfPermit } from './selfPermit'
-import { encodeRouteToPath } from './utils'
-import { MethodParameters, toHex } from './utils/calldata'
-import { abi } from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json'
+import { Interface } from '@ethersproject/abi';
+import {
+  BigintIsh,
+  Currency,
+  Percent,
+  TradeType,
+  validateAndParseAddress,
+} from '@alagunoff/uniswap-sdk-core';
+import invariant from 'tiny-invariant';
+import { Trade } from './entities/trade';
+import { ADDRESS_ZERO } from './constants';
+import { PermitOptions, SelfPermit } from './selfPermit';
+import { encodeRouteToPath } from './utils';
+import { MethodParameters, toHex } from './utils/calldata';
+import { abi } from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 
 export interface FeeOptions {
   /**
    * The percent of the output that will be taken as a fee.
    */
-  fee: Percent
+  fee: Percent;
 
   /**
    * The recipient of the fee.
    */
-  recipient: string
+  recipient: string;
 }
 
 /**
@@ -27,45 +33,45 @@ export interface SwapOptions {
   /**
    * How much the execution price is allowed to move unfavorably from the trade execution price.
    */
-  slippageTolerance: Percent
+  slippageTolerance: Percent;
 
   /**
    * The account that should receive the output.
    */
-  recipient: string
+  recipient: string;
 
   /**
    * When the transaction expires, in epoch seconds.
    */
-  deadline: BigintIsh
+  deadline: BigintIsh;
 
   /**
    * The optional permit parameters for spending the input.
    */
-  inputTokenPermit?: PermitOptions
+  inputTokenPermit?: PermitOptions;
 
   /**
    * The optional price limit for the trade.
    */
-  sqrtPriceLimitX96?: BigintIsh
+  sqrtPriceLimitX96?: BigintIsh;
 
   /**
    * Optional information for taking a fee on output.
    */
-  fee?: FeeOptions
+  fee?: FeeOptions;
 }
 
 /**
  * Represents the Uniswap V2 SwapRouter, and has static methods for helping execute trades.
  */
 export abstract class SwapRouter extends SelfPermit {
-  public static INTERFACE: Interface = new Interface(abi)
+  public static INTERFACE: Interface = new Interface(abi);
 
   /**
    * Cannot be constructed.
    */
   private constructor() {
-    super()
+    super();
   }
 
   /**
@@ -75,33 +81,46 @@ export abstract class SwapRouter extends SelfPermit {
    */
   public static swapCallParameters(
     trade: Trade<Currency, Currency, TradeType>,
-    options: SwapOptions
+    options: SwapOptions,
   ): MethodParameters {
-    const calldatas: string[] = []
+    const calldatas: string[] = [];
 
     // encode permit if necessary
     if (options.inputTokenPermit) {
-      invariant(trade.inputAmount.currency.isToken, 'NON_TOKEN_PERMIT')
-      calldatas.push(SwapRouter.encodePermit(trade.inputAmount.currency, options.inputTokenPermit))
+      invariant(trade.inputAmount.currency.isToken, 'NON_TOKEN_PERMIT');
+      calldatas.push(
+        SwapRouter.encodePermit(
+          trade.inputAmount.currency,
+          options.inputTokenPermit,
+        ),
+      );
     }
 
-    const recipient: string = validateAndParseAddress(options.recipient)
+    const recipient: string = validateAndParseAddress(options.recipient);
 
-    const deadline = toHex(options.deadline)
+    const deadline = toHex(options.deadline);
 
-    const amountIn: string = toHex(trade.maximumAmountIn(options.slippageTolerance).quotient)
-    const amountOut: string = toHex(trade.minimumAmountOut(options.slippageTolerance).quotient)
-    const value: string = trade.inputAmount.currency.isEther ? amountIn : toHex(0)
+    const amountIn: string = toHex(
+      trade.maximumAmountIn(options.slippageTolerance).quotient,
+    );
+    const amountOut: string = toHex(
+      trade.minimumAmountOut(options.slippageTolerance).quotient,
+    );
+    const value: string = trade.inputAmount.currency.isEther
+      ? amountIn
+      : toHex(0);
 
     // flag for whether the trade is single hop or not
-    const singleHop = trade.route.pools.length === 1
+    const singleHop = trade.route.pools.length === 1;
 
     // flag for whether a refund needs to happen
-    const mustRefund = trade.inputAmount.currency.isEther && trade.tradeType === TradeType.EXACT_OUTPUT
+    const mustRefund =
+      trade.inputAmount.currency.isEther &&
+      trade.tradeType === TradeType.EXACT_OUTPUT;
 
     // flags for whether funds should be send first to the router
-    const outputIsEther = trade.outputAmount.currency.isEther
-    const routerMustCustody = outputIsEther || !!options.fee
+    const outputIsEther = trade.outputAmount.currency.isEther;
+    const routerMustCustody = outputIsEther || !!options.fee;
 
     if (singleHop) {
       if (trade.tradeType === TradeType.EXACT_INPUT) {
@@ -113,10 +132,14 @@ export abstract class SwapRouter extends SelfPermit {
           deadline,
           amountIn,
           amountOutMinimum: amountOut,
-          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0)
-        }
+          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0),
+        };
 
-        calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('exactInputSingle', [exactInputSingleParams]))
+        calldatas.push(
+          SwapRouter.INTERFACE.encodeFunctionData('exactInputSingle', [
+            exactInputSingleParams,
+          ]),
+        );
       } else {
         const exactOutputSingleParams = {
           tokenIn: trade.route.tokenPath[0].address,
@@ -126,15 +149,25 @@ export abstract class SwapRouter extends SelfPermit {
           deadline,
           amountOut,
           amountInMaximum: amountIn,
-          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0)
-        }
+          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0),
+        };
 
-        calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('exactOutputSingle', [exactOutputSingleParams]))
+        calldatas.push(
+          SwapRouter.INTERFACE.encodeFunctionData('exactOutputSingle', [
+            exactOutputSingleParams,
+          ]),
+        );
       }
     } else {
-      invariant(options.sqrtPriceLimitX96 === undefined, 'MULTIHOP_PRICE_LIMIT')
+      invariant(
+        options.sqrtPriceLimitX96 === undefined,
+        'MULTIHOP_PRICE_LIMIT',
+      );
 
-      const path: string = encodeRouteToPath(trade.route, trade.tradeType === TradeType.EXACT_OUTPUT)
+      const path: string = encodeRouteToPath(
+        trade.route,
+        trade.tradeType === TradeType.EXACT_OUTPUT,
+      );
 
       if (trade.tradeType === TradeType.EXACT_INPUT) {
         const exactInputParams = {
@@ -142,38 +175,53 @@ export abstract class SwapRouter extends SelfPermit {
           recipient: routerMustCustody ? ADDRESS_ZERO : recipient,
           deadline,
           amountIn,
-          amountOutMinimum: amountOut
-        }
+          amountOutMinimum: amountOut,
+        };
 
-        calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('exactInput', [exactInputParams]))
+        calldatas.push(
+          SwapRouter.INTERFACE.encodeFunctionData('exactInput', [
+            exactInputParams,
+          ]),
+        );
       } else {
         const exactOutputParams = {
           path,
           recipient: routerMustCustody ? ADDRESS_ZERO : recipient,
           deadline,
           amountOut,
-          amountInMaximum: amountIn
-        }
+          amountInMaximum: amountIn,
+        };
 
-        calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('exactOutput', [exactOutputParams]))
+        calldatas.push(
+          SwapRouter.INTERFACE.encodeFunctionData('exactOutput', [
+            exactOutputParams,
+          ]),
+        );
       }
     }
 
     // refund
     if (mustRefund) {
-      calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('refundETH'))
+      calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('refundETH'));
     }
 
     // unwrap
     if (routerMustCustody) {
       if (!!options.fee) {
-        const feeRecipient: string = validateAndParseAddress(options.fee.recipient)
-        const fee = toHex(options.fee.fee.multiply(10_000).quotient)
+        const feeRecipient: string = validateAndParseAddress(
+          options.fee.recipient,
+        );
+        const fee = toHex(options.fee.fee.multiply(10_000).quotient);
 
         if (outputIsEther) {
           calldatas.push(
-            SwapRouter.INTERFACE.encodeFunctionData('unwrapWETH9WithFee', [amountOut, recipient, fee, feeRecipient])
-          )
+            SwapRouter.INTERFACE.encodeFunctionData('unwrapWETH9WithFee', [
+              amountOut,
+              recipient,
+              fee,
+              feeRecipient,
+            ]),
+          );
         } else {
           calldatas.push(
             SwapRouter.INTERFACE.encodeFunctionData('sweepTokenWithFee', [
@@ -181,19 +229,26 @@ export abstract class SwapRouter extends SelfPermit {
               amountOut,
               recipient,
               fee,
-              feeRecipient
-            ])
-          )
+              feeRecipient,
+            ]),
+          );
         }
       } else {
-        calldatas.push(SwapRouter.INTERFACE.encodeFunctionData('unwrapWETH9', [amountOut, recipient]))
+        calldatas.push(
+          SwapRouter.INTERFACE.encodeFunctionData('unwrapWETH9', [
+            amountOut,
+            recipient,
+          ]),
+        );
       }
     }
 
     return {
       calldata:
-        calldatas.length === 1 ? calldatas[0] : SwapRouter.INTERFACE.encodeFunctionData('multicall', [calldatas]),
-      value
-    }
+        calldatas.length === 1
+          ? calldatas[0]
+          : SwapRouter.INTERFACE.encodeFunctionData('multicall', [calldatas]),
+      value,
+    };
   }
 }

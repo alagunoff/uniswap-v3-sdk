@@ -1,33 +1,35 @@
-import { BigintIsh, Token } from '@uniswap/sdk-core'
-import { Interface } from '@ethersproject/abi'
-import { abi } from '@uniswap/v3-periphery/artifacts/contracts/interfaces/ISelfPermit.sol/ISelfPermit.json'
-import { toHex } from './utils'
+import { BigintIsh, Token } from '@alagunoff/uniswap-sdk-core';
+import { Interface } from '@ethersproject/abi';
+import { abi } from '@uniswap/v3-periphery/artifacts/contracts/interfaces/ISelfPermit.sol/ISelfPermit.json';
+import { toHex } from './utils';
 
 export interface StandardPermitArguments {
-  v: 0 | 1 | 27 | 28
-  r: string
-  s: string
-  amount: BigintIsh
-  deadline: BigintIsh
+  v: 0 | 1 | 27 | 28;
+  r: string;
+  s: string;
+  amount: BigintIsh;
+  deadline: BigintIsh;
 }
 
 export interface AllowedPermitArguments {
-  v: 0 | 1 | 27 | 28
-  r: string
-  s: string
-  nonce: BigintIsh
-  expiry: BigintIsh
+  v: 0 | 1 | 27 | 28;
+  r: string;
+  s: string;
+  nonce: BigintIsh;
+  expiry: BigintIsh;
 }
 
-export type PermitOptions = StandardPermitArguments | AllowedPermitArguments
+export type PermitOptions = StandardPermitArguments | AllowedPermitArguments;
 
 // type guard
-function isAllowedPermit(permitOptions: PermitOptions): permitOptions is AllowedPermitArguments {
-  return 'nonce' in permitOptions
+function isAllowedPermit(
+  permitOptions: PermitOptions,
+): permitOptions is AllowedPermitArguments {
+  return 'nonce' in permitOptions;
 }
 
 export abstract class SelfPermit {
-  public static INTERFACE: Interface = new Interface(abi)
+  public static INTERFACE: Interface = new Interface(abi);
 
   protected constructor() {}
 
@@ -39,7 +41,7 @@ export abstract class SelfPermit {
           toHex(options.expiry),
           options.v,
           options.r,
-          options.s
+          options.s,
         ])
       : SelfPermit.INTERFACE.encodeFunctionData('selfPermit', [
           token.address,
@@ -47,7 +49,7 @@ export abstract class SelfPermit {
           toHex(options.deadline),
           options.v,
           options.r,
-          options.s
-        ])
+          options.s,
+        ]);
   }
 }

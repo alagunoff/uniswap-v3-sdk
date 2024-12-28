@@ -21,8 +21,9 @@
     "node": "16.20.2"
   },
   "scripts": {
-    "build": "tsdx build",
     "start": "tsdx watch",
+    "prettier:fix": "prettier . --write --ignore-unknown",
+    "build": "tsdx build",
     "prepublishOnly": "tsdx build"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@uniswap/v3-core": "1.0.0",
+    "prettier": "3.4.2",
     "tsdx": "0.14.1"
   },
   "prettier": {
