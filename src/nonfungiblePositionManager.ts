@@ -6,7 +6,7 @@ import {
   CurrencyAmount,
   validateAndParseAddress,
   WETH9,
-  Currency,
+  Currency
 } from '@alagunoff/uniswap-sdk-core';
 import JSBI from 'jsbi';
 import invariant from 'tiny-invariant';
@@ -21,8 +21,8 @@ import { ADDRESS_ZERO } from './constants';
 const MaxUint128 = toHex(
   JSBI.subtract(
     JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(128)),
-    JSBI.BigInt(1),
-  ),
+    JSBI.BigInt(1)
+  )
 );
 
 export interface MintSpecificOptions {
@@ -82,7 +82,7 @@ export type AddLiquidityOptions = MintOptions | IncreaseOptions;
 
 // type guard
 function isMint(options: AddLiquidityOptions): options is MintOptions {
-  return Object.keys(options).some((k) => k === 'recipient');
+  return Object.keys(options).some(k => k === 'recipient');
 }
 
 export interface CollectOptions {
@@ -167,19 +167,21 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
 
   public static addCallParameters(
     position: Position,
-    options: AddLiquidityOptions,
+    options: AddLiquidityOptions
   ): MethodParameters {
     invariant(JSBI.greaterThan(position.liquidity, ZERO), 'ZERO_LIQUIDITY');
 
     const calldatas: string[] = [];
 
     // get amounts
-    const { amount0: amount0Desired, amount1: amount1Desired } =
-      position.mintAmounts;
+    const {
+      amount0: amount0Desired,
+      amount1: amount1Desired
+    } = position.mintAmounts;
 
     // adjust for slippage
     const minimumAmounts = position.mintAmountsWithSlippage(
-      options.slippageTolerance,
+      options.slippageTolerance
     );
     const amount0Min = toHex(minimumAmounts.amount0);
     const amount1Min = toHex(minimumAmounts.amount1);
@@ -195,9 +197,9 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
             position.pool.token0.address,
             position.pool.token1.address,
             position.pool.fee,
-            toHex(position.pool.sqrtRatioX96),
-          ],
-        ),
+            toHex(position.pool.sqrtRatioX96)
+          ]
+        )
       );
     }
 
@@ -206,16 +208,16 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
       calldatas.push(
         NonfungiblePositionManager.encodePermit(
           position.pool.token0,
-          options.token0Permit,
-        ),
+          options.token0Permit
+        )
       );
     }
     if (options.token1Permit) {
       calldatas.push(
         NonfungiblePositionManager.encodePermit(
           position.pool.token1,
-          options.token1Permit,
-        ),
+          options.token1Permit
+        )
       );
     }
 
@@ -236,9 +238,9 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
             amount0Min,
             amount1Min,
             recipient,
-            deadline,
-          },
-        ]),
+            deadline
+          }
+        ])
       );
     } else {
       // increase
@@ -252,10 +254,10 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
               amount1Desired: toHex(amount1Desired),
               amount0Min,
               amount1Min,
-              deadline,
-            },
-          ],
-        ),
+              deadline
+            }
+          ]
+        )
       );
     }
 
@@ -267,7 +269,7 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
         weth &&
           (position.pool.token0.equals(weth) ||
             position.pool.token1.equals(weth)),
-        'NO_WETH',
+        'NO_WETH'
       );
 
       const wethValue = position.pool.token0.equals(weth)
@@ -277,7 +279,7 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
       // we only need to refund if we're actually sending ETH
       if (JSBI.greaterThan(wethValue, ZERO)) {
         calldatas.push(
-          NonfungiblePositionManager.INTERFACE.encodeFunctionData('refundETH'),
+          NonfungiblePositionManager.INTERFACE.encodeFunctionData('refundETH')
         );
       }
 
@@ -290,9 +292,9 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
           ? calldatas[0]
           : NonfungiblePositionManager.INTERFACE.encodeFunctionData(
               'multicall',
-              [calldatas],
+              [calldatas]
             ),
-      value,
+      value
     };
   }
 
@@ -303,7 +305,9 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
 
     const involvesETH =
       options.expectedCurrencyOwed0.currency.isEther ||
-      options.expectedCurrencyOwed1.currency.isEther;
+      options.expectedCurrencyOwed1.currency.isPol ||
+      options.expectedCurrencyOwed1.currency.isEther ||
+      options.expectedCurrencyOwed1.currency.isPol;
 
     const recipient = validateAndParseAddress(options.recipient);
 
@@ -314,34 +318,40 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
           tokenId,
           recipient: involvesETH ? ADDRESS_ZERO : recipient,
           amount0Max: MaxUint128,
-          amount1Max: MaxUint128,
-        },
-      ]),
+          amount1Max: MaxUint128
+        }
+      ])
     );
 
     if (involvesETH) {
-      const ethAmount = options.expectedCurrencyOwed0.currency.isEther
-        ? options.expectedCurrencyOwed0.quotient
-        : options.expectedCurrencyOwed1.quotient;
-      const token = options.expectedCurrencyOwed0.currency.isEther
-        ? (options.expectedCurrencyOwed1.currency as Token)
-        : (options.expectedCurrencyOwed0.currency as Token);
-      const tokenAmount = options.expectedCurrencyOwed0.currency.isEther
-        ? options.expectedCurrencyOwed1.quotient
-        : options.expectedCurrencyOwed0.quotient;
+      const ethAmount =
+        options.expectedCurrencyOwed0.currency.isEther ||
+        options.expectedCurrencyOwed0.currency.isPol
+          ? options.expectedCurrencyOwed0.quotient
+          : options.expectedCurrencyOwed1.quotient;
+      const token =
+        options.expectedCurrencyOwed0.currency.isEther ||
+        options.expectedCurrencyOwed0.currency.isPol
+          ? (options.expectedCurrencyOwed1.currency as Token)
+          : (options.expectedCurrencyOwed0.currency as Token);
+      const tokenAmount =
+        options.expectedCurrencyOwed0.currency.isEther ||
+        options.expectedCurrencyOwed0.currency.isPol
+          ? options.expectedCurrencyOwed1.quotient
+          : options.expectedCurrencyOwed0.quotient;
 
       calldatas.push(
         NonfungiblePositionManager.INTERFACE.encodeFunctionData('unwrapWETH9', [
           toHex(ethAmount),
-          recipient,
-        ]),
+          recipient
+        ])
       );
       calldatas.push(
         NonfungiblePositionManager.INTERFACE.encodeFunctionData('sweepToken', [
           token.address,
           toHex(tokenAmount),
-          recipient,
-        ]),
+          recipient
+        ])
       );
     }
 
@@ -349,10 +359,11 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
   }
 
   public static collectCallParameters(
-    options: CollectOptions,
+    options: CollectOptions
   ): MethodParameters {
-    const calldatas: string[] =
-      NonfungiblePositionManager.encodeCollect(options);
+    const calldatas: string[] = NonfungiblePositionManager.encodeCollect(
+      options
+    );
 
     return {
       calldata:
@@ -360,9 +371,9 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
           ? calldatas[0]
           : NonfungiblePositionManager.INTERFACE.encodeFunctionData(
               'multicall',
-              [calldatas],
+              [calldatas]
             ),
-      value: toHex(0),
+      value: toHex(0)
     };
   }
 
@@ -373,7 +384,7 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
    */
   public static removeCallParameters(
     position: Position,
-    options: RemoveLiquidityOptions,
+    options: RemoveLiquidityOptions
   ): MethodParameters {
     const calldatas: string[] = [];
 
@@ -386,16 +397,18 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
       liquidity: options.liquidityPercentage.multiply(position.liquidity)
         .quotient,
       tickLower: position.tickLower,
-      tickUpper: position.tickUpper,
+      tickUpper: position.tickUpper
     });
     invariant(
       JSBI.greaterThan(partialPosition.liquidity, ZERO),
-      'ZERO_LIQUIDITY',
+      'ZERO_LIQUIDITY'
     );
 
     // slippage-adjusted underlying amounts
-    const { amount0: amount0Min, amount1: amount1Min } =
-      partialPosition.burnAmountsWithSlippage(options.slippageTolerance);
+    const {
+      amount0: amount0Min,
+      amount1: amount1Min
+    } = partialPosition.burnAmountsWithSlippage(options.slippageTolerance);
 
     if (options.permit) {
       calldatas.push(
@@ -405,8 +418,8 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
           toHex(options.permit.deadline),
           options.permit.v,
           options.permit.r,
-          options.permit.s,
-        ]),
+          options.permit.s
+        ])
       );
     }
 
@@ -420,14 +433,17 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
             liquidity: toHex(partialPosition.liquidity),
             amount0Min: toHex(amount0Min),
             amount1Min: toHex(amount1Min),
-            deadline,
-          },
-        ],
-      ),
+            deadline
+          }
+        ]
+      )
     );
 
-    const { expectedCurrencyOwed0, expectedCurrencyOwed1, ...rest } =
-      options.collectOptions;
+    const {
+      expectedCurrencyOwed0,
+      expectedCurrencyOwed1,
+      ...rest
+    } = options.collectOptions;
     calldatas.push(
       ...NonfungiblePositionManager.encodeCollect({
         tokenId: options.tokenId,
@@ -435,29 +451,33 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
         expectedCurrencyOwed0: expectedCurrencyOwed0.add(
           expectedCurrencyOwed0.currency.isEther
             ? CurrencyAmount.ether(amount0Min)
+            : expectedCurrencyOwed0.currency.isPol
+            ? CurrencyAmount.pol(amount0Min)
             : CurrencyAmount.fromRawAmount(
                 expectedCurrencyOwed0.currency as Token,
-                amount0Min,
-              ),
+                amount0Min
+              )
         ),
         expectedCurrencyOwed1: expectedCurrencyOwed1.add(
           expectedCurrencyOwed1.currency.isEther
             ? CurrencyAmount.ether(amount1Min)
+            : expectedCurrencyOwed1.currency.isPol
+            ? CurrencyAmount.pol(amount1Min)
             : CurrencyAmount.fromRawAmount(
                 expectedCurrencyOwed1.currency as Token,
-                amount1Min,
-              ),
+                amount1Min
+              )
         ),
-        ...rest,
-      }),
+        ...rest
+      })
     );
 
     if (options.liquidityPercentage.equalTo(ONE)) {
       if (options.burnToken) {
         calldatas.push(
           NonfungiblePositionManager.INTERFACE.encodeFunctionData('burn', [
-            tokenId,
-          ]),
+            tokenId
+          ])
         );
       }
     } else {
@@ -467,9 +487,9 @@ export abstract class NonfungiblePositionManager extends SelfPermit {
     return {
       calldata: NonfungiblePositionManager.INTERFACE.encodeFunctionData(
         'multicall',
-        [calldatas],
+        [calldatas]
       ),
-      value: toHex(0),
+      value: toHex(0)
     };
   }
 }

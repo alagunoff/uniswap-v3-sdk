@@ -5,7 +5,7 @@ import {
   Currency,
   Price,
   Token,
-  wrappedCurrency,
+  wrappedCurrency
 } from '@alagunoff/uniswap-sdk-core';
 import { Pool } from './pool';
 
@@ -24,7 +24,7 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
     invariant(pools.length > 0, 'POOLS');
 
     const chainId = pools[0].chainId;
-    const allOnSameChain = pools.every((pool) => pool.chainId === chainId);
+    const allOnSameChain = pools.every(pool => pool.chainId === chainId);
     invariant(allOnSameChain, 'CHAIN_IDS');
 
     const wrappedInput = wrappedCurrency(input, chainId);
@@ -32,7 +32,7 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
 
     invariant(
       pools[pools.length - 1].involvesToken(wrappedCurrency(output, chainId)),
-      'OUTPUT',
+      'OUTPUT'
     );
 
     /**
@@ -44,7 +44,7 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
       invariant(
         currentInputToken.equals(pool.token0) ||
           currentInputToken.equals(pool.token1),
-        'PATH',
+        'PATH'
       );
       const nextToken = currentInputToken.equals(pool.token0)
         ? pool.token1
@@ -63,14 +63,14 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
   }
 
   /**
-   * Returns the token representation of the input currency. If the input currency is Ether, returns the wrapped ether token.
+   * Returns the token representation of the input currency. If the input currency is Ether or POL, returns the wrapped ether token.
    */
   public get inputToken(): Token {
     return wrappedCurrency(this.input, this.chainId);
   }
 
   /**
-   * Returns the token representation of the output currency. If the output currency is Ether, returns the wrapped ether token.
+   * Returns the token representation of the output currency. If the output currency is Ether or POL, returns the wrapped ether token.
    */
   public get outputToken(): Token {
     return wrappedCurrency(this.output, this.chainId);
@@ -87,29 +87,29 @@ export class Route<TInput extends Currency, TOutput extends Currency> {
         return nextInput.equals(pool.token0)
           ? {
               nextInput: pool.token1,
-              price: price.multiply(pool.token0Price),
+              price: price.multiply(pool.token0Price)
             }
           : {
               nextInput: pool.token0,
-              price: price.multiply(pool.token1Price),
+              price: price.multiply(pool.token1Price)
             };
       },
       this.pools[0].token0.equals(this.inputToken)
         ? {
             nextInput: this.pools[0].token1,
-            price: this.pools[0].token0Price,
+            price: this.pools[0].token0Price
           }
         : {
             nextInput: this.pools[0].token0,
-            price: this.pools[0].token1Price,
-          },
+            price: this.pools[0].token1Price
+          }
     ).price;
 
     return (this._midPrice = new Price(
       this.input,
       this.output,
       price.denominator,
-      price.numerator,
+      price.numerator
     ));
   }
 }

@@ -3,13 +3,12 @@ import {
   ChainId,
   Price,
   Token,
-  CurrencyAmount,
+  CurrencyAmount
 } from '@alagunoff/uniswap-sdk-core';
 import JSBI from 'jsbi';
 import invariant from 'tiny-invariant';
-import { FACTORY_ADDRESS, FeeAmount, TICK_SPACINGS } from '../constants';
+import { FeeAmount, TICK_SPACINGS } from '../constants';
 import { NEGATIVE_ONE, ONE, Q192, ZERO } from '../internalConstants';
-import { computePoolAddress } from '../utils/computePoolAddress';
 import { LiquidityMath } from '../utils/liquidityMath';
 import { SwapMath } from '../utils/swapMath';
 import { TickMath } from '../utils/tickMath';
@@ -47,19 +46,6 @@ export class Pool {
   private _token0Price?: Price<Token, Token>;
   private _token1Price?: Price<Token, Token>;
 
-  public static getAddress(
-    tokenA: Token,
-    tokenB: Token,
-    fee: FeeAmount,
-  ): string {
-    return computePoolAddress({
-      factoryAddress: FACTORY_ADDRESS,
-      fee,
-      tokenA,
-      tokenB,
-    });
-  }
-
   /**
    * Construct a pool
    * @param tokenA one of the tokens in the pool
@@ -79,7 +65,7 @@ export class Pool {
     tickCurrent: number,
     ticks:
       | TickDataProvider
-      | (Tick | TickConstructorArgs)[] = NO_TICK_DATA_PROVIDER_DEFAULT,
+      | (Tick | TickConstructorArgs)[] = NO_TICK_DATA_PROVIDER_DEFAULT
   ) {
     invariant(Number.isInteger(fee) && fee < 1_000_000, 'FEE');
 
@@ -88,10 +74,10 @@ export class Pool {
     invariant(
       JSBI.greaterThanOrEqual(
         JSBI.BigInt(sqrtRatioX96),
-        tickCurrentSqrtRatioX96,
+        tickCurrentSqrtRatioX96
       ) &&
         JSBI.lessThanOrEqual(JSBI.BigInt(sqrtRatioX96), nextTickSqrtRatioX96),
-      'PRICE_BOUNDS',
+      'PRICE_BOUNDS'
     );
     // always create a copy of the list since we want the pool's tick list to be immutable
     [this.token0, this.token1] = tokenA.sortsBefore(tokenB)
@@ -124,7 +110,7 @@ export class Pool {
         this.token0,
         this.token1,
         Q192,
-        JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96),
+        JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96)
       ))
     );
   }
@@ -139,7 +125,7 @@ export class Pool {
         this.token1,
         this.token0,
         JSBI.multiply(this.sqrtRatioX96, this.sqrtRatioX96),
-        Q192,
+        Q192
       ))
     );
   }
@@ -166,7 +152,7 @@ export class Pool {
    */
   public async getOutputAmount(
     inputAmount: CurrencyAmount<Token>,
-    sqrtPriceLimitX96?: JSBI,
+    sqrtPriceLimitX96?: JSBI
   ): Promise<[CurrencyAmount<Token>, Pool]> {
     invariant(this.involvesToken(inputAmount.currency), 'TOKEN');
 
@@ -176,13 +162,13 @@ export class Pool {
       amountCalculated: outputAmount,
       sqrtRatioX96,
       liquidity,
-      tickCurrent,
+      tickCurrent
     } = await this.swap(zeroForOne, inputAmount.quotient, sqrtPriceLimitX96);
     const outputToken = zeroForOne ? this.token1 : this.token0;
     return [
       CurrencyAmount.fromRawAmount(
         outputToken,
-        JSBI.multiply(outputAmount, NEGATIVE_ONE),
+        JSBI.multiply(outputAmount, NEGATIVE_ONE)
       ),
       new Pool(
         this.token0,
@@ -191,8 +177,8 @@ export class Pool {
         sqrtRatioX96,
         liquidity,
         tickCurrent,
-        this.tickDataProvider,
-      ),
+        this.tickDataProvider
+      )
     ];
   }
 
@@ -202,12 +188,12 @@ export class Pool {
    */
   public async getInputAmount(
     outputAmount: CurrencyAmount<Token>,
-    sqrtPriceLimitX96?: JSBI,
+    sqrtPriceLimitX96?: JSBI
   ): Promise<[CurrencyAmount<Token>, Pool]> {
     invariant(
       outputAmount.currency.isToken &&
         this.involvesToken(outputAmount.currency),
-      'TOKEN',
+      'TOKEN'
     );
 
     const zeroForOne = outputAmount.currency.equals(this.token1);
@@ -216,11 +202,11 @@ export class Pool {
       amountCalculated: inputAmount,
       sqrtRatioX96,
       liquidity,
-      tickCurrent,
+      tickCurrent
     } = await this.swap(
       zeroForOne,
       JSBI.multiply(outputAmount.quotient, NEGATIVE_ONE),
-      sqrtPriceLimitX96,
+      sqrtPriceLimitX96
     );
     const inputToken = zeroForOne ? this.token0 : this.token1;
     return [
@@ -232,15 +218,15 @@ export class Pool {
         sqrtRatioX96,
         liquidity,
         tickCurrent,
-        this.tickDataProvider,
-      ),
+        this.tickDataProvider
+      )
     ];
   }
 
   private async swap(
     zeroForOne: boolean,
     amountSpecified: JSBI,
-    sqrtPriceLimitX96?: JSBI,
+    sqrtPriceLimitX96?: JSBI
   ): Promise<{
     amountCalculated: JSBI;
     sqrtRatioX96: JSBI;
@@ -255,20 +241,20 @@ export class Pool {
     if (zeroForOne) {
       invariant(
         JSBI.greaterThan(sqrtPriceLimitX96, TickMath.MIN_SQRT_RATIO),
-        'RATIO_MIN',
+        'RATIO_MIN'
       );
       invariant(
         JSBI.lessThan(sqrtPriceLimitX96, this.sqrtRatioX96),
-        'RATIO_CURRENT',
+        'RATIO_CURRENT'
       );
     } else {
       invariant(
         JSBI.lessThan(sqrtPriceLimitX96, TickMath.MAX_SQRT_RATIO),
-        'RATIO_MAX',
+        'RATIO_MAX'
       );
       invariant(
         JSBI.greaterThan(sqrtPriceLimitX96, this.sqrtRatioX96),
-        'RATIO_CURRENT',
+        'RATIO_CURRENT'
       );
     }
 
@@ -280,7 +266,7 @@ export class Pool {
       amountCalculated: ZERO,
       sqrtPriceX96: this.sqrtRatioX96,
       tick: this.tickCurrent,
-      liquidity: this.liquidity,
+      liquidity: this.liquidity
     };
 
     // start swap while loop
@@ -294,12 +280,14 @@ export class Pool {
       // because each iteration of the while loop rounds, we can't optimize this code (relative to the smart contract)
       // by simply traversing to the next available tick, we instead need to exactly replicate
       // tickBitmap.nextInitializedTickWithinOneWord
-      [step.tickNext, step.initialized] =
-        await this.tickDataProvider.nextInitializedTickWithinOneWord(
-          state.tick,
-          zeroForOne,
-          this.tickSpacing,
-        );
+      [
+        step.tickNext,
+        step.initialized
+      ] = await this.tickDataProvider.nextInitializedTickWithinOneWord(
+        state.tick,
+        zeroForOne,
+        this.tickSpacing
+      );
 
       if (step.tickNext < TickMath.MIN_TICK) {
         step.tickNext = TickMath.MIN_TICK;
@@ -308,38 +296,40 @@ export class Pool {
       }
 
       step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
-      [state.sqrtPriceX96, step.amountIn, step.amountOut, step.feeAmount] =
-        SwapMath.computeSwapStep(
-          state.sqrtPriceX96,
-          (
-            zeroForOne
-              ? JSBI.lessThan(step.sqrtPriceNextX96, sqrtPriceLimitX96)
-              : JSBI.greaterThan(step.sqrtPriceNextX96, sqrtPriceLimitX96)
-          )
-            ? sqrtPriceLimitX96
-            : step.sqrtPriceNextX96,
-          state.liquidity,
-          state.amountSpecifiedRemaining,
-          this.fee,
-        );
+      [
+        state.sqrtPriceX96,
+        step.amountIn,
+        step.amountOut,
+        step.feeAmount
+      ] = SwapMath.computeSwapStep(
+        state.sqrtPriceX96,
+        (zeroForOne
+        ? JSBI.lessThan(step.sqrtPriceNextX96, sqrtPriceLimitX96)
+        : JSBI.greaterThan(step.sqrtPriceNextX96, sqrtPriceLimitX96))
+          ? sqrtPriceLimitX96
+          : step.sqrtPriceNextX96,
+        state.liquidity,
+        state.amountSpecifiedRemaining,
+        this.fee
+      );
 
       if (exactInput) {
         state.amountSpecifiedRemaining = JSBI.subtract(
           state.amountSpecifiedRemaining,
-          JSBI.add(step.amountIn, step.feeAmount),
+          JSBI.add(step.amountIn, step.feeAmount)
         );
         state.amountCalculated = JSBI.subtract(
           state.amountCalculated,
-          step.amountOut,
+          step.amountOut
         );
       } else {
         state.amountSpecifiedRemaining = JSBI.add(
           state.amountSpecifiedRemaining,
-          step.amountOut,
+          step.amountOut
         );
         state.amountCalculated = JSBI.add(
           state.amountCalculated,
-          JSBI.add(step.amountIn, step.feeAmount),
+          JSBI.add(step.amountIn, step.feeAmount)
         );
       }
 
@@ -348,7 +338,7 @@ export class Pool {
         // if the tick is initialized, run the tick transition
         if (step.initialized) {
           let liquidityNet = JSBI.BigInt(
-            (await this.tickDataProvider.getTick(step.tickNext)).liquidityNet,
+            (await this.tickDataProvider.getTick(step.tickNext)).liquidityNet
           );
           // if we're moving leftward, we interpret liquidityNet as the opposite sign
           // safe because liquidityNet cannot be type(int128).min
@@ -357,7 +347,7 @@ export class Pool {
 
           state.liquidity = LiquidityMath.addDelta(
             state.liquidity,
-            liquidityNet,
+            liquidityNet
           );
         }
 
@@ -372,7 +362,7 @@ export class Pool {
       amountCalculated: state.amountCalculated,
       sqrtRatioX96: state.sqrtPriceX96,
       liquidity: state.liquidity,
-      tickCurrent: state.tick,
+      tickCurrent: state.tick
     };
   }
 

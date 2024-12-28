@@ -4,7 +4,7 @@ import {
   Currency,
   Percent,
   TradeType,
-  validateAndParseAddress,
+  validateAndParseAddress
 } from '@alagunoff/uniswap-sdk-core';
 import invariant from 'tiny-invariant';
 import { Trade } from './entities/trade';
@@ -81,7 +81,7 @@ export abstract class SwapRouter extends SelfPermit {
    */
   public static swapCallParameters(
     trade: Trade<Currency, Currency, TradeType>,
-    options: SwapOptions,
+    options: SwapOptions
   ): MethodParameters {
     const calldatas: string[] = [];
 
@@ -91,8 +91,8 @@ export abstract class SwapRouter extends SelfPermit {
       calldatas.push(
         SwapRouter.encodePermit(
           trade.inputAmount.currency,
-          options.inputTokenPermit,
-        ),
+          options.inputTokenPermit
+        )
       );
     }
 
@@ -101,25 +101,28 @@ export abstract class SwapRouter extends SelfPermit {
     const deadline = toHex(options.deadline);
 
     const amountIn: string = toHex(
-      trade.maximumAmountIn(options.slippageTolerance).quotient,
+      trade.maximumAmountIn(options.slippageTolerance).quotient
     );
     const amountOut: string = toHex(
-      trade.minimumAmountOut(options.slippageTolerance).quotient,
+      trade.minimumAmountOut(options.slippageTolerance).quotient
     );
-    const value: string = trade.inputAmount.currency.isEther
-      ? amountIn
-      : toHex(0);
+    const value: string =
+      trade.inputAmount.currency.isEther || trade.inputAmount.currency.isPol
+        ? amountIn
+        : toHex(0);
 
     // flag for whether the trade is single hop or not
     const singleHop = trade.route.pools.length === 1;
 
     // flag for whether a refund needs to happen
     const mustRefund =
-      trade.inputAmount.currency.isEther &&
+      (trade.inputAmount.currency.isEther ||
+        trade.inputAmount.currency.isPol) &&
       trade.tradeType === TradeType.EXACT_OUTPUT;
 
     // flags for whether funds should be send first to the router
-    const outputIsEther = trade.outputAmount.currency.isEther;
+    const outputIsEther =
+      trade.outputAmount.currency.isEther || trade.outputAmount.currency.isPol;
     const routerMustCustody = outputIsEther || !!options.fee;
 
     if (singleHop) {
@@ -132,13 +135,13 @@ export abstract class SwapRouter extends SelfPermit {
           deadline,
           amountIn,
           amountOutMinimum: amountOut,
-          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0),
+          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0)
         };
 
         calldatas.push(
           SwapRouter.INTERFACE.encodeFunctionData('exactInputSingle', [
-            exactInputSingleParams,
-          ]),
+            exactInputSingleParams
+          ])
         );
       } else {
         const exactOutputSingleParams = {
@@ -149,24 +152,24 @@ export abstract class SwapRouter extends SelfPermit {
           deadline,
           amountOut,
           amountInMaximum: amountIn,
-          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0),
+          sqrtPriceLimitX96: toHex(options.sqrtPriceLimitX96 ?? 0)
         };
 
         calldatas.push(
           SwapRouter.INTERFACE.encodeFunctionData('exactOutputSingle', [
-            exactOutputSingleParams,
-          ]),
+            exactOutputSingleParams
+          ])
         );
       }
     } else {
       invariant(
         options.sqrtPriceLimitX96 === undefined,
-        'MULTIHOP_PRICE_LIMIT',
+        'MULTIHOP_PRICE_LIMIT'
       );
 
       const path: string = encodeRouteToPath(
         trade.route,
-        trade.tradeType === TradeType.EXACT_OUTPUT,
+        trade.tradeType === TradeType.EXACT_OUTPUT
       );
 
       if (trade.tradeType === TradeType.EXACT_INPUT) {
@@ -175,13 +178,13 @@ export abstract class SwapRouter extends SelfPermit {
           recipient: routerMustCustody ? ADDRESS_ZERO : recipient,
           deadline,
           amountIn,
-          amountOutMinimum: amountOut,
+          amountOutMinimum: amountOut
         };
 
         calldatas.push(
           SwapRouter.INTERFACE.encodeFunctionData('exactInput', [
-            exactInputParams,
-          ]),
+            exactInputParams
+          ])
         );
       } else {
         const exactOutputParams = {
@@ -189,13 +192,13 @@ export abstract class SwapRouter extends SelfPermit {
           recipient: routerMustCustody ? ADDRESS_ZERO : recipient,
           deadline,
           amountOut,
-          amountInMaximum: amountIn,
+          amountInMaximum: amountIn
         };
 
         calldatas.push(
           SwapRouter.INTERFACE.encodeFunctionData('exactOutput', [
-            exactOutputParams,
-          ]),
+            exactOutputParams
+          ])
         );
       }
     }
@@ -209,7 +212,7 @@ export abstract class SwapRouter extends SelfPermit {
     if (routerMustCustody) {
       if (!!options.fee) {
         const feeRecipient: string = validateAndParseAddress(
-          options.fee.recipient,
+          options.fee.recipient
         );
         const fee = toHex(options.fee.fee.multiply(10_000).quotient);
 
@@ -219,8 +222,8 @@ export abstract class SwapRouter extends SelfPermit {
               amountOut,
               recipient,
               fee,
-              feeRecipient,
-            ]),
+              feeRecipient
+            ])
           );
         } else {
           calldatas.push(
@@ -229,16 +232,16 @@ export abstract class SwapRouter extends SelfPermit {
               amountOut,
               recipient,
               fee,
-              feeRecipient,
-            ]),
+              feeRecipient
+            ])
           );
         }
       } else {
         calldatas.push(
           SwapRouter.INTERFACE.encodeFunctionData('unwrapWETH9', [
             amountOut,
-            recipient,
-          ]),
+            recipient
+          ])
         );
       }
     }
@@ -248,7 +251,7 @@ export abstract class SwapRouter extends SelfPermit {
         calldatas.length === 1
           ? calldatas[0]
           : SwapRouter.INTERFACE.encodeFunctionData('multicall', [calldatas]),
-      value,
+      value
     };
   }
 }
