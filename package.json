@@ -1,5 +1,5 @@
 {
-  "name": "uniswap-v3-sdk",
+  "name": "@alagunoff/uniswap-v3-sdk",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -11,7 +11,10 @@
   "files": [
     "dist"
   ],
-  "repository": "https://github.com/alagunoff/uniswap-v3-sdk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alagunoff/uniswap-v3-sdk.git"
+  },
   "keywords": [
     "uniswap",
     "ethereum"
@@ -42,5 +45,10 @@
   "prettier": {
     "singleQuote": true,
     "endOfLine": "auto"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/alagunoff/uniswap-v3-sdk/issues"
+  },
+  "homepage": "https://github.com/alagunoff/uniswap-v3-sdk#readme",
+  "author": ""
 }
