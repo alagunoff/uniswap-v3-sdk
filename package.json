@@ -24,13 +24,13 @@
     "node": "16.20.2"
   },
   "scripts": {
+    "prepublishOnly": "tsdx build",
     "start": "tsdx watch",
     "prettier:fix": "prettier . --write --ignore-unknown",
-    "build": "tsdx build",
-    "prepublishOnly": "tsdx build"
+    "build": "tsdx build"
   },
   "dependencies": {
-    "@alagunoff/uniswap-sdk-core": "3.0.0",
+    "@alagunoff/uniswap-sdk-core": "3.1.0",
     "@ethersproject/abi": "5.0.12",
     "@ethersproject/solidity": "5.0.9",
     "@uniswap/v3-periphery": "1.0.0",
